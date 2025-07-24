@@ -1,10 +1,12 @@
 const axios = require('axios');
 
-// PUBLIC_INTERFACE
 /**
  * Generates app names using OpenAI or returns stub data if OPENAI_API_KEY is absent.
+ * Results are wrapped in engaging/friendly structures, and errors are user-friendly.
  * @param {Object} options Options for name generation (prompt, n, etc.)
- * @returns {Promise<{ names: string[], stub: boolean, error?: string }>}
+ * @returns {Promise<{ names: string[], stub: boolean, message?: string, error?: string }>}
+ *
+ * PUBLIC_INTERFACE
  */
 async function generateNames(options = {}) {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -12,23 +14,31 @@ async function generateNames(options = {}) {
   const theme = options.theme || 'modern';
   const category = options.category || 'app';
 
+  // Helper to wrap names in an engaging message
+  function formatNames(names) {
+    if (!Array.isArray(names) || names.length === 0) return [];
+    return names.map(name => `✨ Try this name! "${name.trim()}"`);
+  }
+
+  // Fallback: stub names if API key missing
   if (!apiKey) {
-    // Fallback: stub names
     console.warn('[NameGeneratorService] OPENAI_API_KEY not set. Using stub data.');
+    const stubList = [
+      'Lumino',
+      'Visia',
+      'Quantu',
+      'NebulaCore',
+      'Zenbyte',
+      'Invox',
+      'Synthara',
+      'Prismark',
+      'CodeForge',
+      'Optivis'
+    ].slice(0, n);
     return {
-      names: [
-        'Lumino',
-        'Visia',
-        'Quantu',
-        'NebulaCore',
-        'Zenbyte',
-        'Invox',
-        'Synthara',
-        'Prismark',
-        'CodeForge',
-        'Optivis'
-      ].slice(0, n),
-      stub: true
+      names: formatNames(stubList),
+      stub: true,
+      message: 'No AI API key provided, but here are some creative suggestions to inspire you! 🤗'
     };
   }
 
@@ -54,11 +64,10 @@ async function generateNames(options = {}) {
       }
     );
 
-    // Extract names from OpenAI response
+    // Extract and friendly-format names from OpenAI response
     const choices = response?.data?.choices;
     let allNames = [];
     if (choices && choices[0] && choices[0].message && choices[0].message.content) {
-      // OpenAI may return comma or newline separated, split smartly
       allNames = choices[0].message.content
         .replace(/\n/g, ',')
         .split(',')
@@ -68,15 +77,21 @@ async function generateNames(options = {}) {
     }
 
     return {
-      names: allNames,
-      stub: false
+      names: formatNames(allNames),
+      stub: false,
+      message: 'Here are some awesome app name ideas for you! 🚀'
     };
   } catch (error) {
     console.error('[NameGeneratorService] Error contacting OpenAI API:', error?.response?.data || error.message);
+    let friendlyMsg = 'Oops! We had trouble reaching our naming AI. Please try again later, or use the default suggestions.';
+    // Optionally add more details if available
+    if (error?.response?.data?.error?.message) {
+      friendlyMsg += ` (Details: ${error.response.data.error.message})`;
+    }
     return {
       names: [],
       stub: false,
-      error: 'AI provider error'
+      error: friendlyMsg
     };
   }
 }

@@ -52,7 +52,13 @@ class NameGeneratorController {
     // Call the service to generate names
     const result = await nameGeneratorService.generateNames({ n: maxN, theme, category });
     if (result.error) {
-      return res.status(502).json({ error: result.error, names: [], stub: result.stub });
+      // Always send a friendly, helpful message for errors
+      return res.status(502).json({
+        error: result.error,
+        names: [],
+        stub: !!result.stub,
+        message: 'We couldn\'t fetch AI-generated names right now, but you can try again soon!'
+      });
     }
     return res.status(200).json(result);
   }
